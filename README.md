@@ -120,3 +120,7 @@ go run ./cmd/server
 ```bash
 go test ./...
 ```
+
+## 上线前检查清单
+
+- 参考：`docs/go-live-checklist.md`
