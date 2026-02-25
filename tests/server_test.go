@@ -380,8 +380,7 @@ func TestExecuteSkillIdempotencyKey(t *testing.T) {
 	adminID := getAdminID(t, ts.URL)
 	headers := map[string]string{"X-User-Id": adminID}
 
-	actionID, skillID := createActiveAtomicSkill(t, ts.URL, headers, upstream.URL)
-	_ = actionID
+	skillID := createActiveAtomicSkill(t, ts.URL, headers, upstream.URL)
 
 	baselineCalls := calls
 	req1, _ := http.NewRequest(http.MethodPost, ts.URL+"/api/skills/"+skillID+"/execute", bytes.NewBufferString(`{"input":{"title":"bug"}}`))
@@ -430,7 +429,7 @@ func TestExecuteSkillRateLimit(t *testing.T) {
 	adminID := getAdminID(t, ts.URL)
 	headers := map[string]string{"X-User-Id": adminID}
 
-	_, skillID := createActiveAtomicSkill(t, ts.URL, headers, upstream.URL)
+	skillID := createActiveAtomicSkill(t, ts.URL, headers, upstream.URL)
 
 	first := doJSON(t, http.MethodPost, ts.URL+"/api/skills/"+skillID+"/execute", headers, map[string]any{"input": map[string]any{"title": "bug"}})
 	if first.StatusCode != 200 {
@@ -442,7 +441,7 @@ func TestExecuteSkillRateLimit(t *testing.T) {
 	}
 }
 
-func createActiveAtomicSkill(t *testing.T, base string, headers map[string]string, url string) (string, string) {
+func createActiveAtomicSkill(t *testing.T, base string, headers map[string]string, url string) string {
 	register := doJSON(t, http.MethodPost, base+"/api/actions/register", headers, map[string]any{
 		"name":          "rate_action",
 		"description":   "desc",
@@ -478,5 +477,5 @@ func createActiveAtomicSkill(t *testing.T, base string, headers map[string]strin
 	if len(list) == 0 {
 		t.Fatal("no skills")
 	}
-	return actionID, list[0]["id"].(string)
+	return list[0]["id"].(string)
 }

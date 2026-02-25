@@ -20,8 +20,7 @@
 ## 启动
 
 ```bash
-go run .
-# 或 go run ./cmd/server
+go run ./cmd/server
 ```
 
 默认监听 `:8080`，可通过 `ADDR` 覆盖。  
@@ -33,7 +32,7 @@ go run .
 
 当前项目已按 gin-vue-admin 常见的分层启动方式改造：
 
-- `main.go` / `cmd/server/main.go`：入口
+- `cmd/server/main.go`：入口
 - `core`：服务启动与基础运行
 - `initialize`：应用初始化
 - `router`：路由装配
