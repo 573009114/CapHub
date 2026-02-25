@@ -20,12 +20,26 @@
 ## 启动
 
 ```bash
-go run ./cmd/server
+go run .
+# 或 go run ./cmd/server
 ```
 
 默认监听 `:8080`，可通过 `ADDR` 覆盖。  
 默认数据文件为 `./caphub-data.json`，可通过 `DATA_FILE` 覆盖。  
 可通过 `TENANT_QUOTA_QPS` 配置默认租户 QPS（默认 2000）。
+
+
+## 架构说明（Gin-Vue-Admin 风格）
+
+当前项目已按 gin-vue-admin 常见的分层启动方式改造：
+
+- `main.go` / `cmd/server/main.go`：入口
+- `core`：服务启动与基础运行
+- `initialize`：应用初始化
+- `router`：路由装配
+- `internal/caphub`：领域核心实现
+
+> 受当前环境网络限制，无法直接拉取 gin-vue-admin 源码模板，因此采用同风格分层并保留现有业务实现。
 
 ## 关键接口
 
