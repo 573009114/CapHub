@@ -690,8 +690,16 @@ func (s *Server) actionRoutes(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
 
+func normalizeAPIPath(path string) string {
+	if strings.HasPrefix(path, apiPrefixV1+"/") {
+		return "/api/" + strings.TrimPrefix(path, apiPrefixV1+"/")
+	}
+	return path
+}
+
 func actionIDFromPath(path, suffix string) string {
-	trim := strings.TrimSuffix(strings.TrimPrefix(path, "/api/actions/"), suffix)
+	normalized := normalizeAPIPath(path)
+	trim := strings.TrimSuffix(strings.TrimPrefix(normalized, "/api/actions/"), suffix)
 	return strings.Trim(trim, "/")
 }
 
@@ -986,7 +994,8 @@ func (s *Server) executeSkill(w http.ResponseWriter, r *http.Request, user *User
 		methodNotAllowed(w)
 		return
 	}
-	skillID := strings.Trim(strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/skills/"), "/execute"), "/")
+	normalizedPath := normalizeAPIPath(r.URL.Path)
+	skillID := strings.Trim(strings.TrimSuffix(strings.TrimPrefix(normalizedPath, "/api/skills/"), "/execute"), "/")
 	var req executeReq
 	if err := parseJSON(r, &req); err != nil {
 		writeError(w, 400, err.Error())

@@ -507,6 +507,12 @@ func TestInitDBEndpoint(t *testing.T) {
 }
 
 func TestAPIV1AliasAndCORS(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer upstream.Close()
+
 	t.Setenv("DATA_FILE", filepath.Join(t.TempDir(), "caphub-data.json"))
 	store := caphub.NewStore()
 	srv := caphub.NewServer(store)
@@ -521,6 +527,17 @@ func TestAPIV1AliasAndCORS(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatalf("v1 bootstrap status=%d", resp.StatusCode)
 	}
+
+	adminID := getAdminID(t, ts.URL)
+	headers := map[string]string{"X-User-Id": adminID}
+	skillID := createActiveAtomicSkill(t, ts.URL, headers, upstream.URL)
+	// re-point created action to local test upstream style endpoint via fake action is not needed,
+	// we only need to verify v1 path parsing reaches execute handler.
+	execResp := doJSON(t, http.MethodPost, ts.URL+"/api/v1/skills/"+skillID+"/execute", headers, map[string]any{"input": map[string]any{"title": "bug"}})
+	if execResp.StatusCode != 200 {
+		t.Fatalf("v1 execute status=%d", execResp.StatusCode)
+	}
+	_ = execResp.Body.Close()
 
 	req, err := http.NewRequest(http.MethodOptions, ts.URL+"/api/v1/skills", nil)
 	if err != nil {
