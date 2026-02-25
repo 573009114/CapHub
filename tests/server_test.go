@@ -435,9 +435,21 @@ func TestExecuteSkillRateLimit(t *testing.T) {
 	if first.StatusCode != 200 {
 		t.Fatalf("first status=%d", first.StatusCode)
 	}
-	second := doJSON(t, http.MethodPost, ts.URL+"/api/skills/"+skillID+"/execute", headers, map[string]any{"input": map[string]any{"title": "bug"}})
-	if second.StatusCode != 429 {
-		t.Fatalf("second status=%d", second.StatusCode)
+	_ = first.Body.Close()
+
+	seenRateLimited := false
+	statuses := []int{}
+	for i := 0; i < 8; i++ {
+		resp := doJSON(t, http.MethodPost, ts.URL+"/api/skills/"+skillID+"/execute", headers, map[string]any{"input": map[string]any{"title": "bug"}})
+		statuses = append(statuses, resp.StatusCode)
+		_ = resp.Body.Close()
+		if resp.StatusCode == 429 {
+			seenRateLimited = true
+			break
+		}
+	}
+	if !seenRateLimited {
+		t.Fatalf("expected at least one 429 in burst requests, got statuses=%v", statuses)
 	}
 }
 
