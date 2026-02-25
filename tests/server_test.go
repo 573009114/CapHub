@@ -505,3 +505,37 @@ func TestInitDBEndpoint(t *testing.T) {
 		t.Fatal("expected admin to be reinitialized with new id")
 	}
 }
+
+func TestAPIV1AliasAndCORS(t *testing.T) {
+	t.Setenv("DATA_FILE", filepath.Join(t.TempDir(), "caphub-data.json"))
+	store := caphub.NewStore()
+	srv := caphub.NewServer(store)
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/v1/bootstrap/admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		t.Fatalf("v1 bootstrap status=%d", resp.StatusCode)
+	}
+
+	req, err := http.NewRequest(http.MethodOptions, ts.URL+"/api/v1/skills", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Origin", "http://localhost:5173")
+	corsResp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer corsResp.Body.Close()
+	if corsResp.StatusCode != http.StatusNoContent {
+		t.Fatalf("cors preflight status=%d", corsResp.StatusCode)
+	}
+	if corsResp.Header.Get("Access-Control-Allow-Origin") != "*" {
+		t.Fatalf("unexpected cors origin header: %q", corsResp.Header.Get("Access-Control-Allow-Origin"))
+	}
+}

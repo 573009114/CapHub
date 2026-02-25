@@ -27,7 +27,7 @@ func WrapF(h http.HandlerFunc) HandlerFunc {
 
 func (e *Engine) add(method, path string, h HandlerFunc) {
 	e.mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		if method != "" && r.Method != method {
+		if method != "" && r.Method != method && r.Method != http.MethodOptions {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			_, _ = w.Write([]byte(`{"detail":"method not allowed"}`))
 			return

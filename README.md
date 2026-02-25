@@ -41,6 +41,12 @@ go run ./cmd/server
 
 > 受当前环境网络限制，无法直接拉取 gin-vue-admin 源码模板，因此采用同风格分层并保留现有业务实现。
 
+## 前后端分离约定
+
+- 所有业务 API 保留原有 `/api/...` 路径，同时提供版本化别名 `/api/v1/...`（便于前端按版本对接）。
+- 服务默认开启 CORS 响应头（`Access-Control-Allow-Origin: *`），支持前端通过浏览器直接联调。
+- 建议前端统一使用 `/api/v1` 作为 baseURL，后端后续新增能力按版本演进。
+
 ## 关键接口
 
 - `GET /healthz`
@@ -55,6 +61,8 @@ go run ./cmd/server
 - `POST /api/skills/workflow`（创建 Workflow Skill，支持 step 级 retry 与 rollback action）
 - `POST /api/skills/{id}/execute`
 - `GET /api/audit_logs`
+
+> 上述 `/api/*` 接口均可使用 `/api/v1/*` 等价访问（例如 `/api/v1/skills`）。
 
 > 受保护接口支持两种认证方式：
 > 1) `Authorization: Bearer <token>`（推荐）

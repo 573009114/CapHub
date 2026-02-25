@@ -293,17 +293,32 @@ func NewServer(store *Store) *Server {
 func (s *Server) Handler() http.Handler { return s.engine }
 
 func (s *Server) routes() {
-	s.engine.GET("/healthz", gin.WrapF(s.healthz))
-	s.engine.GET("/api/bootstrap/admin", gin.WrapF(s.bootstrapAdmin))
-	s.engine.POST("/api/bootstrap/init_db", gin.WrapF(s.withPerm("action:write", s.initDB)))
-	s.engine.POST("/api/auth/token", gin.WrapF(s.issueToken))
-	s.engine.POST("/api/actions/register", gin.WrapF(s.withPerm("action:write", s.registerAction)))
-	s.engine.POST("/api/actions/import/openapi", gin.WrapF(s.withPerm("action:write", s.importOpenAPI)))
-	s.engine.Any("/api/actions/", gin.WrapF(s.actionRoutes))
-	s.engine.GET("/api/skills", gin.WrapF(s.auth(s.querySkills)))
-	s.engine.POST("/api/skills/workflow", gin.WrapF(s.withPerm("action:write", s.createWorkflowSkill)))
-	s.engine.Any("/api/skills/", gin.WrapF(s.skillRoutes))
-	s.engine.GET("/api/audit_logs", gin.WrapF(s.withPerm("audit:read", s.auditLogs)))
+	registerGet := func(path string, h http.HandlerFunc) {
+		s.engine.GET(path, gin.WrapF(s.withCORS(h)))
+		if path != rHealthz {
+			s.engine.GET(apiPrefixV1+path[4:], gin.WrapF(s.withCORS(h)))
+		}
+	}
+	registerPost := func(path string, h http.HandlerFunc) {
+		s.engine.POST(path, gin.WrapF(s.withCORS(h)))
+		s.engine.POST(apiPrefixV1+path[4:], gin.WrapF(s.withCORS(h)))
+	}
+	registerAny := func(path string, h http.HandlerFunc) {
+		s.engine.Any(path, gin.WrapF(s.withCORS(h)))
+		s.engine.Any(apiPrefixV1+path[4:], gin.WrapF(s.withCORS(h)))
+	}
+
+	registerGet(rHealthz, s.healthz)
+	registerGet(rBootstrapAdmin, s.bootstrapAdmin)
+	registerPost(rBootstrapInitDB, s.withPerm("action:write", s.initDB))
+	registerPost(rAuthToken, s.issueToken)
+	registerPost(rActionsRegister, s.withPerm("action:write", s.registerAction))
+	registerPost(rActionsImport, s.withPerm("action:write", s.importOpenAPI))
+	registerAny(rActionsWildcard, s.actionRoutes)
+	registerGet(rSkillsQuery, s.auth(s.querySkills))
+	registerPost(rSkillsWorkflow, s.withPerm("action:write", s.createWorkflowSkill))
+	registerAny(rSkillsWildcard, s.skillRoutes)
+	registerGet(rAuditLogs, s.withPerm("audit:read", s.auditLogs))
 }
 
 func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {
