@@ -18,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type RiskLevel string
@@ -259,7 +261,7 @@ func (s *Store) persistLocked() error {
 type Server struct {
 	store     *Store
 	client    *http.Client
-	mux       *http.ServeMux
+	engine    *gin.Engine
 	jwtSecret []byte
 }
 
@@ -268,24 +270,24 @@ func NewServer(store *Store) *Server {
 	if secret == "" {
 		secret = "dev-secret-change-me"
 	}
-	s := &Server{store: store, client: &http.Client{Timeout: 5 * time.Second}, mux: http.NewServeMux(), jwtSecret: []byte(secret)}
+	s := &Server{store: store, client: &http.Client{Timeout: 5 * time.Second}, engine: gin.Default(), jwtSecret: []byte(secret)}
 	s.routes()
 	return s
 }
 
-func (s *Server) Handler() http.Handler { return s.mux }
+func (s *Server) Handler() http.Handler { return s.engine }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("/healthz", s.healthz)
-	s.mux.HandleFunc("/api/bootstrap/admin", s.bootstrapAdmin)
-	s.mux.HandleFunc("/api/auth/token", s.issueToken)
-	s.mux.HandleFunc("/api/actions/register", s.withPerm("action:write", s.registerAction))
-	s.mux.HandleFunc("/api/actions/import/openapi", s.withPerm("action:write", s.importOpenAPI))
-	s.mux.HandleFunc("/api/actions/", s.actionRoutes)
-	s.mux.HandleFunc("/api/skills", s.auth(s.querySkills))
-	s.mux.HandleFunc("/api/skills/workflow", s.withPerm("action:write", s.createWorkflowSkill))
-	s.mux.HandleFunc("/api/skills/", s.skillRoutes)
-	s.mux.HandleFunc("/api/audit_logs", s.withPerm("audit:read", s.auditLogs))
+	s.engine.GET("/healthz", gin.WrapF(s.healthz))
+	s.engine.GET("/api/bootstrap/admin", gin.WrapF(s.bootstrapAdmin))
+	s.engine.POST("/api/auth/token", gin.WrapF(s.issueToken))
+	s.engine.POST("/api/actions/register", gin.WrapF(s.withPerm("action:write", s.registerAction)))
+	s.engine.POST("/api/actions/import/openapi", gin.WrapF(s.withPerm("action:write", s.importOpenAPI)))
+	s.engine.Any("/api/actions/", gin.WrapF(s.actionRoutes))
+	s.engine.GET("/api/skills", gin.WrapF(s.auth(s.querySkills)))
+	s.engine.POST("/api/skills/workflow", gin.WrapF(s.withPerm("action:write", s.createWorkflowSkill)))
+	s.engine.Any("/api/skills/", gin.WrapF(s.skillRoutes))
+	s.engine.GET("/api/audit_logs", gin.WrapF(s.withPerm("audit:read", s.auditLogs)))
 }
 
 func (s *Server) healthz(w http.ResponseWriter, _ *http.Request) {

@@ -14,7 +14,7 @@
 ## 技术栈
 
 - Go 1.22+
-- net/http（无第三方 Web 框架）
+- Gin（采用 gin-vue-admin 常见的 Gin 路由架构）
 - 本地 JSON 文件存储（默认 `./caphub-data.json`）
 
 ## 启动
