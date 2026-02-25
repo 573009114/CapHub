@@ -25,7 +25,8 @@ go run ./cmd/server
 
 默认监听 `:8080`，可通过 `ADDR` 覆盖。  
 默认数据文件为 `./caphub-data.json`，可通过 `DATA_FILE` 覆盖。  
-可通过 `TENANT_QUOTA_QPS` 配置默认租户 QPS（默认 2000）。
+可通过 `TENANT_QUOTA_QPS` 配置默认租户 QPS（默认 2000）。  
+可通过 `INIT_DB_ON_START=true` 在服务启动时强制初始化数据。
 
 
 ## 架构说明（Gin-Vue-Admin 风格）
@@ -44,6 +45,7 @@ go run ./cmd/server
 
 - `GET /healthz`
 - `GET /api/bootstrap/admin`（获取默认管理员 ID）
+- `POST /api/bootstrap/init_db`（初始化/重置本地数据库快照，需 `action:write`）
 - `POST /api/auth/token`（用 user_id 换取 Bearer Token）
 - `POST /api/actions/register`
 - `POST /api/actions/import/openapi`（导入 OpenAPI 文档并批量生成 Draft Actions）

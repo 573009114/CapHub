@@ -168,6 +168,9 @@ func NewStore() *Store {
 		s.bootstrapEmpty()
 		_ = s.persistLocked()
 	}
+	if os.Getenv("INIT_DB_ON_START") == "true" {
+		_ = s.initialize(true)
+	}
 	return s
 }
 
@@ -197,6 +200,18 @@ func (s *Store) bootstrapEmpty() {
 	}}
 	s.users[admin.ID] = admin
 	s.adminID = admin.ID
+}
+
+func (s *Store) initialize(force bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !force {
+		if len(s.tenants) > 0 || len(s.actions) > 0 || len(s.skills) > 0 || len(s.executions) > 0 || len(s.auditLogs) > 0 {
+			return errors.New("database already initialized; set force=true to reset")
+		}
+	}
+	s.bootstrapEmpty()
+	return s.persistLocked()
 }
 
 func (s *Store) load() error {
@@ -280,6 +295,7 @@ func (s *Server) Handler() http.Handler { return s.engine }
 func (s *Server) routes() {
 	s.engine.GET("/healthz", gin.WrapF(s.healthz))
 	s.engine.GET("/api/bootstrap/admin", gin.WrapF(s.bootstrapAdmin))
+	s.engine.POST("/api/bootstrap/init_db", gin.WrapF(s.withPerm("action:write", s.initDB)))
 	s.engine.POST("/api/auth/token", gin.WrapF(s.issueToken))
 	s.engine.POST("/api/actions/register", gin.WrapF(s.withPerm("action:write", s.registerAction)))
 	s.engine.POST("/api/actions/import/openapi", gin.WrapF(s.withPerm("action:write", s.importOpenAPI)))
@@ -298,6 +314,23 @@ func (s *Server) bootstrapAdmin(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"admin_user_id": s.store.adminID})
 }
 
+func (s *Server) initDB(w http.ResponseWriter, r *http.Request, _ *User) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var req initDBRequest
+	if err := parseJSON(r, &req); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	if err := s.store.initialize(req.Force); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]any{"status": "initialized", "force": req.Force})
+}
+
 type authTokenRequest struct {
 	UserID string `json:"user_id"`
 }
@@ -306,6 +339,10 @@ type tokenClaims struct {
 	Sub      string `json:"sub"`
 	TenantID string `json:"tenant_id"`
 	Exp      int64  `json:"exp"`
+}
+
+type initDBRequest struct {
+	Force bool `json:"force"`
 }
 
 func (s *Server) issueToken(w http.ResponseWriter, r *http.Request) {

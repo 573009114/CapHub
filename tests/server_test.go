@@ -479,3 +479,29 @@ func createActiveAtomicSkill(t *testing.T, base string, headers map[string]strin
 	}
 	return list[0]["id"].(string)
 }
+
+func TestInitDBEndpoint(t *testing.T) {
+	t.Setenv("DATA_FILE", filepath.Join(t.TempDir(), "caphub-data.json"))
+	store := caphub.NewStore()
+	srv := caphub.NewServer(store)
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	adminID := getAdminID(t, ts.URL)
+	headers := map[string]string{"X-User-Id": adminID}
+
+	noForce := doJSON(t, http.MethodPost, ts.URL+"/api/bootstrap/init_db", headers, map[string]any{"force": false})
+	if noForce.StatusCode != 400 {
+		t.Fatalf("expected 400 for non-force init, got %d", noForce.StatusCode)
+	}
+
+	force := doJSON(t, http.MethodPost, ts.URL+"/api/bootstrap/init_db", headers, map[string]any{"force": true})
+	if force.StatusCode != 200 {
+		t.Fatalf("expected 200 for force init, got %d", force.StatusCode)
+	}
+
+	newAdminID := getAdminID(t, ts.URL)
+	if newAdminID == "" || newAdminID == adminID {
+		t.Fatal("expected admin to be reinitialized with new id")
+	}
+}
