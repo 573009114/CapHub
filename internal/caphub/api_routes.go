@@ -6,6 +6,8 @@ const (
 	rHealthz         = "/healthz"
 	rBootstrapAdmin  = "/api/bootstrap/admin"
 	rBootstrapInitDB = "/api/bootstrap/init_db"
+	rAuthRegister    = "/api/auth/register"
+	rAuthLogin       = "/api/auth/login"
 	rAuthToken       = "/api/auth/token"
 	rActionsRegister = "/api/actions/register"
 	rActionsImport   = "/api/actions/import/openapi"

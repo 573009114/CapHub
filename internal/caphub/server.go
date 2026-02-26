@@ -53,6 +53,7 @@ type User struct {
 	ID          string          `json:"id"`
 	TenantID    string          `json:"tenant_id"`
 	Username    string          `json:"username"`
+	Password    string          `json:"password,omitempty"`
 	Permissions map[string]bool `json:"permissions"`
 	IsActive    bool            `json:"is_active"`
 }
@@ -311,6 +312,8 @@ func (s *Server) routes() {
 	registerGet(rHealthz, s.healthz)
 	registerGet(rBootstrapAdmin, s.bootstrapAdmin)
 	registerPost(rBootstrapInitDB, s.withPerm("action:write", s.initDB))
+	registerPost(rAuthRegister, s.registerUser)
+	registerPost(rAuthLogin, s.loginUser)
 	registerPost(rAuthToken, s.issueToken)
 	registerPost(rActionsRegister, s.withPerm("action:write", s.registerAction))
 	registerPost(rActionsImport, s.withPerm("action:write", s.importOpenAPI))
@@ -348,6 +351,16 @@ func (s *Server) initDB(w http.ResponseWriter, r *http.Request, _ *User) {
 
 type authTokenRequest struct {
 	UserID string `json:"user_id"`
+}
+
+type authRegisterRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type authLoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type tokenClaims struct {
@@ -388,6 +401,100 @@ func (s *Server) issueToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"access_token": token, "token_type": "Bearer", "expires_in": 28800})
+}
+
+func (s *Server) registerUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var req authRegisterRequest
+	if err := parseJSON(r, &req); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" || req.Password == "" {
+		writeError(w, 400, "username and password are required")
+		return
+	}
+
+	s.store.mu.Lock()
+	defer s.store.mu.Unlock()
+	for _, u := range s.store.users {
+		if strings.EqualFold(u.Username, req.Username) {
+			writeError(w, 409, "username already exists")
+			return
+		}
+	}
+	admin := s.store.users[s.store.adminID]
+	if admin == nil {
+		writeError(w, 500, "admin user not found")
+		return
+	}
+
+	newUser := &User{
+		ID:       newID(),
+		TenantID: admin.TenantID,
+		Username: req.Username,
+		Password: req.Password,
+		IsActive: true,
+		Permissions: map[string]bool{
+			"action:write":  true,
+			"action:read":   true,
+			"skill:execute": true,
+			"audit:read":    true,
+		},
+	}
+	s.store.users[newUser.ID] = newUser
+	s.appendAuditLocked(&AuditLog{ID: newID(), TenantID: newUser.TenantID, UserID: newUser.ID, Action: "auth.register", ResourceType: "user", ResourceID: newUser.ID, TraceID: newID(), Details: map[string]any{"username": newUser.Username}, CreatedAt: time.Now().UTC()})
+	_ = s.store.persistLocked()
+
+	claims := tokenClaims{Sub: newUser.ID, TenantID: newUser.TenantID, Exp: time.Now().Add(8 * time.Hour).Unix()}
+	token, err := s.signJWT(claims)
+	if err != nil {
+		writeError(w, 500, "failed to sign token")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"user_id": newUser.ID, "username": newUser.Username, "access_token": token, "token_type": "Bearer", "expires_in": 28800})
+}
+
+func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var req authLoginRequest
+	if err := parseJSON(r, &req); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" || req.Password == "" {
+		writeError(w, 400, "username and password are required")
+		return
+	}
+
+	s.store.mu.RLock()
+	var user *User
+	for _, u := range s.store.users {
+		if strings.EqualFold(u.Username, req.Username) {
+			user = u
+			break
+		}
+	}
+	s.store.mu.RUnlock()
+	if user == nil || !user.IsActive || user.Password != req.Password {
+		writeError(w, 401, "invalid username or password")
+		return
+	}
+	claims := tokenClaims{Sub: user.ID, TenantID: user.TenantID, Exp: time.Now().Add(8 * time.Hour).Unix()}
+	token, err := s.signJWT(claims)
+	if err != nil {
+		writeError(w, 500, "failed to sign token")
+		return
+	}
+	writeJSON(w, 200, map[string]any{"user_id": user.ID, "username": user.Username, "access_token": token, "token_type": "Bearer", "expires_in": 28800})
 }
 
 func (s *Server) currentUserFromRequest(r *http.Request) (*User, error) {

@@ -98,6 +98,49 @@ func TestCrossTenantIsolationForSkillExecuteAndAudit(t *testing.T) {
 	}
 }
 
+func TestAuthRegisterAndLoginFlow(t *testing.T) {
+	t.Setenv("DATA_FILE", filepath.Join(t.TempDir(), "caphub-data.json"))
+	store := NewStore()
+	srv := NewServer(store)
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	regResp := doJSONRequest(t, http.MethodPost, ts.URL+"/api/auth/register", nil, map[string]any{"username": "alice", "password": "pass123"})
+	if regResp.StatusCode != http.StatusOK {
+		t.Fatalf("register status=%d", regResp.StatusCode)
+	}
+	var regBody map[string]any
+	decodeResponseJSON(t, regResp, &regBody)
+	if regBody["access_token"] == "" {
+		t.Fatal("expected access_token on register")
+	}
+
+	loginResp := doJSONRequest(t, http.MethodPost, ts.URL+"/api/auth/login", nil, map[string]any{"username": "alice", "password": "pass123"})
+	if loginResp.StatusCode != http.StatusOK {
+		t.Fatalf("login status=%d", loginResp.StatusCode)
+	}
+	var loginBody map[string]any
+	decodeResponseJSON(t, loginResp, &loginBody)
+	token, _ := loginBody["access_token"].(string)
+	if token == "" {
+		t.Fatal("expected access_token on login")
+	}
+
+	req, err := http.NewRequest(http.MethodGet, ts.URL+"/api/skills", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 using login token, got %d", res.StatusCode)
+	}
+}
+
 func doJSONRequest(t *testing.T, method, url string, headers map[string]string, payload any) *http.Response {
 	t.Helper()
 	var buf bytes.Buffer

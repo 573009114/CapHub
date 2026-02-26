@@ -50,7 +50,7 @@ go run ./cmd/server
 
 ## 前端控制台（新增）
 
-已提供轻量前端页面：`frontend/index.html`，可用于本地联调 Action/Skill 全流程。
+已提供 Vue 3 前端页面：`frontend/index.html`，可用于本地联调登录/注册与 Action/Skill 全流程。
 
 启动方式（前后端分离）：
 
@@ -65,7 +65,8 @@ python3 -m http.server 5500 -d frontend
 浏览器访问：`http://localhost:5500`。
 
 页面支持：
-- 获取管理员 ID、换取 Token、健康检查
+- 用户注册 / 登录（`/api/auth/register`、`/api/auth/login`）
+- 获取管理员 ID、健康检查
 - Action 注册 + 验证 + 激活
 - Skill 查询 + 执行
 - 审计日志查询
@@ -75,6 +76,8 @@ python3 -m http.server 5500 -d frontend
 - `GET /healthz`
 - `GET /api/bootstrap/admin`（获取默认管理员 ID）
 - `POST /api/bootstrap/init_db`（初始化/重置本地数据库快照，需 `action:write`）
+- `POST /api/auth/register`（用户名密码注册）
+- `POST /api/auth/login`（用户名密码登录）
 - `POST /api/auth/token`（用 user_id 换取 Bearer Token）
 - `POST /api/actions/register`
 - `POST /api/actions/import/openapi`（导入 OpenAPI 文档并批量生成 Draft Actions）

@@ -1,132 +1,151 @@
-const $ = (id) => document.getElementById(id);
+const { createApp } = Vue;
 
-function getAuthHeaders() {
-  const token = $("token").value.trim();
-  const userId = $("userId").value.trim();
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers.Authorization = `Bearer ${token}`;
-  else if (userId) headers["X-User-Id"] = userId;
-  return headers;
-}
-
-function base(path) {
-  return `${$("baseUrl").value.replace(/\/$/, "")}${path}`;
-}
-
-function log(title, data) {
-  $("output").textContent = `${title}\n${JSON.stringify(data, null, 2)}`;
-}
-
-async function api(path, { method = "GET", body } = {}) {
-  const res = await fetch(base(path), {
-    method,
-    headers: getAuthHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  let data;
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
-  if (!res.ok) throw { status: res.status, data };
-  return data;
-}
-
-function safeJSON(text, fieldName) {
-  try { return JSON.parse(text); }
-  catch { throw new Error(`${fieldName} 不是合法 JSON`); }
-}
-
-$("btnBootstrap").onclick = async () => {
-  try {
-    const data = await api("/api/bootstrap/admin");
-    $("userId").value = data.admin_user_id || "";
-    log("管理员ID", data);
-  } catch (e) { log("错误", e); }
-};
-
-$("btnToken").onclick = async () => {
-  try {
-    const userId = $("userId").value.trim();
-    const data = await api("/api/auth/token", { method: "POST", body: { user_id: userId } });
-    $("token").value = data.access_token || "";
-    log("Token", data);
-  } catch (e) { log("错误", e); }
-};
-
-$("btnHealth").onclick = async () => {
-  try { log("健康检查", await api("/healthz")); }
-  catch (e) { log("错误", e); }
-};
-
-$("btnRegisterAction").onclick = async () => {
-  try {
-    const body = {
-      name: $("actionName").value.trim(),
-      description: $("actionDesc").value.trim(),
-      method: $("actionMethod").value.trim().toUpperCase(),
-      url: $("actionUrl").value.trim(),
-      headers: {},
-      auth_config: {},
-      input_schema: safeJSON($("inputSchema").value, "Input Schema"),
-      output_schema: safeJSON($("outputSchema").value, "Output Schema"),
-      risk_level: $("riskLevel").value,
-      tags: $("actionTags").value.split(",").map((x) => x.trim()).filter(Boolean),
+createApp({
+  data() {
+    return {
+      baseUrl: localStorage.getItem('caphub.baseUrl') || 'http://localhost:8080',
+      username: localStorage.getItem('caphub.username') || '',
+      password: '',
+      token: localStorage.getItem('caphub.token') || '',
+      userId: localStorage.getItem('caphub.userId') || '',
+      output: '欢迎使用 CapHub Vue 控制台',
+      actionForm: {
+        name: 'create_ticket',
+        method: 'POST',
+        url: 'http://127.0.0.1:8080/healthz',
+        risk_level: 'medium',
+        tags: '工单,ops',
+        description: '创建工单',
+        input_schema: '{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]}',
+        output_schema: '{"type":"object","properties":{"ok":{"type":"boolean"}},"required":["ok"]}',
+      },
+      actionId: '',
+      skillName: 'create_ticket',
+      skillTag: '工单',
+      skillId: '',
+      confirmRisk: false,
+      execInput: '{"title":"bug"}',
+      skills: [],
+      audits: [],
     };
-    const data = await api("/api/actions/register", { method: "POST", body });
-    $("actionId").value = data.id || "";
-    log("Action 注册成功", data);
-  } catch (e) { log("错误", e); }
-};
-
-$("btnVerify").onclick = async () => {
-  try {
-    const id = $("actionId").value.trim();
-    log("Action 验证", await api(`/api/actions/${id}/verify`, { method: "POST" }));
-  } catch (e) { log("错误", e); }
-};
-
-$("btnActivate").onclick = async () => {
-  try {
-    const id = $("actionId").value.trim();
-    log("Action 激活", await api(`/api/actions/${id}/activate`, { method: "POST" }));
-  } catch (e) { log("错误", e); }
-};
-
-$("btnQuerySkills").onclick = async () => {
-  try {
-    const name = encodeURIComponent($("skillName").value.trim());
-    const tag = encodeURIComponent($("skillTag").value.trim());
-    const data = await api(`/api/skills?name=${name}&tag=${tag}`);
-    const tbody = $("skillsTable").querySelector("tbody");
-    tbody.innerHTML = "";
-    data.forEach((s) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${s.id}</td><td>${s.name}</td><td>${s.skill_type}</td><td>${s.risk_level}</td>`;
-      tr.onclick = () => { $("skillId").value = s.id; };
-      tbody.appendChild(tr);
-    });
-    log("Skill 查询", data);
-  } catch (e) { log("错误", e); }
-};
-
-$("btnExecuteSkill").onclick = async () => {
-  try {
-    const id = $("skillId").value.trim();
-    const input = safeJSON($("execInput").value, "执行输入");
-    const body = { input, confirm_high_risk: $("confirmRisk").value === "true" };
-    log("Skill 执行", await api(`/api/skills/${id}/execute`, { method: "POST", body }));
-  } catch (e) { log("错误", e); }
-};
-
-$("btnAudit").onclick = async () => {
-  try {
-    const data = await api("/api/audit_logs");
-    const tbody = $("auditTable").querySelector("tbody");
-    tbody.innerHTML = "";
-    data.forEach((a) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${a.created_at || ""}</td><td>${a.action || ""}</td><td>${a.resource_id || ""}</td><td>${a.trace_id || ""}</td>`;
-      tbody.appendChild(tr);
-    });
-    log("审计日志", data);
-  } catch (e) { log("错误", e); }
-};
+  },
+  watch: {
+    baseUrl(v) { localStorage.setItem('caphub.baseUrl', v); },
+    token(v) { localStorage.setItem('caphub.token', v || ''); },
+    userId(v) { localStorage.setItem('caphub.userId', v || ''); },
+    username(v) { localStorage.setItem('caphub.username', v || ''); },
+  },
+  methods: {
+    headers() {
+      const h = { 'Content-Type': 'application/json' };
+      if (this.token) h.Authorization = `Bearer ${this.token}`;
+      else if (this.userId) h['X-User-Id'] = this.userId;
+      return h;
+    },
+    async request(path, method = 'GET', body) {
+      const res = await fetch(`${this.baseUrl.replace(/\/$/, '')}${path}`, {
+        method,
+        headers: this.headers(),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const text = await res.text();
+      let data;
+      try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
+      if (!res.ok) throw { status: res.status, data };
+      return data;
+    },
+    parseJSON(v, field) {
+      try { return JSON.parse(v); } catch { throw new Error(`${field} 不是合法 JSON`); }
+    },
+    print(title, data) {
+      this.output = `${title}\n${JSON.stringify(data, null, 2)}`;
+    },
+    async bootstrapAdmin() {
+      try {
+        const data = await this.request('/api/bootstrap/admin');
+        this.userId = data.admin_user_id || '';
+        this.print('管理员ID', data);
+      } catch (e) { this.print('错误', e); }
+    },
+    async health() {
+      try { this.print('健康检查', await this.request('/healthz')); }
+      catch (e) { this.print('错误', e); }
+    },
+    async register() {
+      try {
+        const data = await this.request('/api/auth/register', 'POST', {
+          username: this.username,
+          password: this.password,
+        });
+        this.userId = data.user_id;
+        this.token = data.access_token;
+        this.print('注册成功', data);
+      } catch (e) { this.print('注册失败', e); }
+    },
+    async login() {
+      try {
+        const data = await this.request('/api/auth/login', 'POST', {
+          username: this.username,
+          password: this.password,
+        });
+        this.userId = data.user_id;
+        this.token = data.access_token;
+        this.print('登录成功', data);
+      } catch (e) { this.print('登录失败', e); }
+    },
+    logout() {
+      this.token = '';
+      this.password = '';
+      this.print('已退出登录', { ok: true });
+    },
+    async registerAction() {
+      try {
+        const data = await this.request('/api/actions/register', 'POST', {
+          name: this.actionForm.name,
+          description: this.actionForm.description,
+          method: this.actionForm.method.toUpperCase(),
+          url: this.actionForm.url,
+          headers: {},
+          auth_config: {},
+          input_schema: this.parseJSON(this.actionForm.input_schema, 'Input Schema'),
+          output_schema: this.parseJSON(this.actionForm.output_schema, 'Output Schema'),
+          risk_level: this.actionForm.risk_level,
+          tags: this.actionForm.tags.split(',').map((v) => v.trim()).filter(Boolean),
+        });
+        this.actionId = data.id;
+        this.print('Action 注册成功', data);
+      } catch (e) { this.print('错误', e); }
+    },
+    async verifyAction() {
+      try { this.print('Action 验证', await this.request(`/api/actions/${this.actionId}/verify`, 'POST')); }
+      catch (e) { this.print('错误', e); }
+    },
+    async activateAction() {
+      try { this.print('Action 激活', await this.request(`/api/actions/${this.actionId}/activate`, 'POST')); }
+      catch (e) { this.print('错误', e); }
+    },
+    async querySkills() {
+      try {
+        const data = await this.request(`/api/skills?name=${encodeURIComponent(this.skillName)}&tag=${encodeURIComponent(this.skillTag)}`);
+        this.skills = data;
+        this.print('Skill 查询', data);
+      } catch (e) { this.print('错误', e); }
+    },
+    async executeSkill() {
+      try {
+        const data = await this.request(`/api/skills/${this.skillId}/execute`, 'POST', {
+          input: this.parseJSON(this.execInput, '执行输入'),
+          confirm_high_risk: !!this.confirmRisk,
+        });
+        this.print('Skill 执行', data);
+      } catch (e) { this.print('错误', e); }
+    },
+    async queryAudit() {
+      try {
+        const data = await this.request('/api/audit_logs');
+        this.audits = data;
+        this.print('审计日志', data);
+      } catch (e) { this.print('错误', e); }
+    },
+  },
+}).mount('#app');
