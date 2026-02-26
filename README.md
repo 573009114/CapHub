@@ -47,6 +47,29 @@ go run ./cmd/server
 - 服务默认开启 CORS 响应头（`Access-Control-Allow-Origin: *`），支持前端通过浏览器直接联调。
 - 建议前端统一使用 `/api/v1` 作为 baseURL，后端后续新增能力按版本演进。
 
+
+## 前端控制台（新增）
+
+已提供轻量前端页面：`frontend/index.html`，可用于本地联调 Action/Skill 全流程。
+
+启动方式（前后端分离）：
+
+```bash
+# 终端1：启动后端
+go run ./cmd/server
+
+# 终端2：启动静态前端
+python3 -m http.server 5500 -d frontend
+```
+
+浏览器访问：`http://localhost:5500`。
+
+页面支持：
+- 获取管理员 ID、换取 Token、健康检查
+- Action 注册 + 验证 + 激活
+- Skill 查询 + 执行
+- 审计日志查询
+
 ## 关键接口
 
 - `GET /healthz`

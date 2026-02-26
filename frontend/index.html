@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CapHub 控制台（MVP）</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>CapHub 控制台</h1>
+      <p>用于注册 API Action、生成/查询 Skill、执行与审计</p>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>连接设置</h2>
+        <div class="grid two">
+          <label>API Base URL
+            <input id="baseUrl" value="http://localhost:8080" />
+          </label>
+          <label>X-User-Id
+            <input id="userId" placeholder="可从 /api/bootstrap/admin 获取" />
+          </label>
+          <label>Bearer Token
+            <input id="token" placeholder="可选，优先于 X-User-Id" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btnBootstrap">获取管理员ID</button>
+          <button id="btnToken">换取 Token</button>
+          <button id="btnHealth">健康检查</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Action 注册</h2>
+        <div class="grid two">
+          <label>Name<input id="actionName" value="create_ticket" /></label>
+          <label>Method<input id="actionMethod" value="POST" /></label>
+          <label class="full">URL<input id="actionUrl" placeholder="https://example.com/api" /></label>
+          <label>Risk Level
+            <select id="riskLevel">
+              <option>low</option><option selected>medium</option><option>high</option>
+            </select>
+          </label>
+          <label>Tags (逗号分隔)<input id="actionTags" value="工单,ops" /></label>
+          <label class="full">Description<input id="actionDesc" value="创建工单" /></label>
+          <label class="full">Input Schema (JSON)
+            <textarea id="inputSchema">{"type":"object","properties":{"title":{"type":"string"}},"required":["title"]}</textarea>
+          </label>
+          <label class="full">Output Schema (JSON)
+            <textarea id="outputSchema">{"type":"object","properties":{"ok":{"type":"boolean"}},"required":["ok"]}</textarea>
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btnRegisterAction">注册 Action</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Action 生命周期</h2>
+        <div class="grid two">
+          <label>Action ID<input id="actionId" placeholder="注册后自动回填" /></label>
+        </div>
+        <div class="actions">
+          <button id="btnVerify">验证 Action</button>
+          <button id="btnActivate">激活 Action</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Skill 查询与执行</h2>
+        <div class="grid two">
+          <label>技能名过滤<input id="skillName" value="create_ticket" /></label>
+          <label>Tag 过滤<input id="skillTag" value="工单" /></label>
+          <label>Skill ID<input id="skillId" placeholder="查询后可复制" /></label>
+          <label>高风险确认
+            <select id="confirmRisk"><option value="false" selected>false</option><option value="true">true</option></select>
+          </label>
+          <label class="full">执行输入 (JSON)
+            <textarea id="execInput">{"title":"bug"}</textarea>
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btnQuerySkills">查询 Skill</button>
+          <button id="btnExecuteSkill">执行 Skill</button>
+        </div>
+        <div class="table-wrap">
+          <table id="skillsTable">
+            <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Risk</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>审计日志</h2>
+        <div class="actions">
+          <button id="btnAudit">查询审计日志</button>
+        </div>
+        <div class="table-wrap">
+          <table id="auditTable">
+            <thead><tr><th>Time</th><th>Action</th><th>Resource</th><th>Trace</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>响应输出</h2>
+        <pre id="output"></pre>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
