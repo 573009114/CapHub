@@ -314,6 +314,7 @@ func (s *Server) routes() {
 	registerPost(rBootstrapInitDB, s.withPerm("action:write", s.initDB))
 	registerPost(rAuthRegister, s.registerUser)
 	registerPost(rAuthLogin, s.loginUser)
+	registerPost(rAuthChangePwd, s.auth(s.changePassword))
 	registerPost(rAuthToken, s.issueToken)
 	registerPost(rActionsRegister, s.withPerm("action:write", s.registerAction))
 	registerPost(rActionsImport, s.withPerm("action:write", s.importOpenAPI))
@@ -361,6 +362,11 @@ type authRegisterRequest struct {
 type authLoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type changePasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password"`
 }
 
 type tokenClaims struct {
@@ -495,6 +501,43 @@ func (s *Server) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, 200, map[string]any{"user_id": user.ID, "username": user.Username, "access_token": token, "token_type": "Bearer", "expires_in": 28800})
+}
+
+func (s *Server) changePassword(w http.ResponseWriter, r *http.Request, user *User) {
+	if r.Method != http.MethodPost {
+		methodNotAllowed(w)
+		return
+	}
+	var req changePasswordRequest
+	if err := parseJSON(r, &req); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	if req.OldPassword == "" || req.NewPassword == "" {
+		writeError(w, 400, "old_password and new_password are required")
+		return
+	}
+	if req.OldPassword == req.NewPassword {
+		writeError(w, 400, "new_password must be different from old_password")
+		return
+	}
+
+	s.store.mu.Lock()
+	defer s.store.mu.Unlock()
+	dbUser := s.store.users[user.ID]
+	if dbUser == nil || !dbUser.IsActive {
+		writeError(w, 401, "Invalid user")
+		return
+	}
+	if dbUser.Password != req.OldPassword {
+		writeError(w, 401, "old password is incorrect")
+		return
+	}
+	dbUser.Password = req.NewPassword
+	s.appendAuditLocked(&AuditLog{ID: newID(), TenantID: dbUser.TenantID, UserID: dbUser.ID, Action: "auth.change_password", ResourceType: "user", ResourceID: dbUser.ID, TraceID: newID(), Details: map[string]any{"username": dbUser.Username}, CreatedAt: time.Now().UTC()})
+	_ = s.store.persistLocked()
+
+	writeJSON(w, 200, map[string]any{"status": "password_updated"})
 }
 
 func (s *Server) currentUserFromRequest(r *http.Request) (*User, error) {

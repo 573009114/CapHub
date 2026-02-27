@@ -30,6 +30,9 @@
             <label>密码
               <input v-model="password" type="password" placeholder="请输入密码" />
             </label>
+            <label>新密码（修改密码时使用）
+              <input v-model="newPassword" type="password" placeholder="请输入新密码" />
+            </label>
             <label>X-User-Id（兼容模式）
               <input v-model="userId" placeholder="可通过管理员ID或登录回填" />
             </label>
@@ -40,6 +43,7 @@
           <div class="actions">
             <button @click="register">注册</button>
             <button @click="login">登录</button>
+            <button @click="changePassword">修改密码</button>
             <button @click="logout" class="ghost">退出登录</button>
             <button @click="bootstrapAdmin" class="ghost">获取管理员ID</button>
             <button @click="health" class="ghost">健康检查</button>

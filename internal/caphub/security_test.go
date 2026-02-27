@@ -139,6 +139,33 @@ func TestAuthRegisterAndLoginFlow(t *testing.T) {
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 using login token, got %d", res.StatusCode)
 	}
+
+	changeReq, err := http.NewRequest(http.MethodPost, ts.URL+"/api/auth/change_password", bytes.NewBufferString(`{"old_password":"pass123","new_password":"pass456"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	changeReq.Header.Set("Content-Type", "application/json")
+	changeReq.Header.Set("Authorization", "Bearer "+token)
+	changeRes, err := http.DefaultClient.Do(changeReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer changeRes.Body.Close()
+	if changeRes.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 on change password, got %d", changeRes.StatusCode)
+	}
+
+	oldLogin := doJSONRequest(t, http.MethodPost, ts.URL+"/api/auth/login", nil, map[string]any{"username": "alice", "password": "pass123"})
+	if oldLogin.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 using old password, got %d", oldLogin.StatusCode)
+	}
+	_ = oldLogin.Body.Close()
+
+	newLogin := doJSONRequest(t, http.MethodPost, ts.URL+"/api/auth/login", nil, map[string]any{"username": "alice", "password": "pass456"})
+	if newLogin.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 using new password, got %d", newLogin.StatusCode)
+	}
+	_ = newLogin.Body.Close()
 }
 
 func doJSONRequest(t *testing.T, method, url string, headers map[string]string, payload any) *http.Response {

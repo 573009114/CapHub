@@ -6,6 +6,7 @@ createApp({
       baseUrl: localStorage.getItem('caphub.baseUrl') || 'http://localhost:8080',
       username: localStorage.getItem('caphub.username') || '',
       password: '',
+      newPassword: '',
       token: localStorage.getItem('caphub.token') || '',
       userId: localStorage.getItem('caphub.userId') || '',
       output: '欢迎使用 CapHub Vue 控制台',
@@ -92,6 +93,19 @@ createApp({
         this.token = data.access_token;
         this.print('登录成功', data);
       } catch (e) { this.print('登录失败', e); }
+    },
+    async changePassword() {
+      try {
+        if (!this.token && !this.userId) throw new Error('请先登录');
+        if (!this.password || !this.newPassword) throw new Error('请输入旧密码和新密码');
+        const data = await this.request('/api/auth/change_password', 'POST', {
+          old_password: this.password,
+          new_password: this.newPassword,
+        });
+        this.password = this.newPassword;
+        this.newPassword = '';
+        this.print('修改密码成功', data);
+      } catch (e) { this.print('修改密码失败', e); }
     },
     logout() {
       this.token = '';

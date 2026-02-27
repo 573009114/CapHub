@@ -8,6 +8,7 @@ const (
 	rBootstrapInitDB = "/api/bootstrap/init_db"
 	rAuthRegister    = "/api/auth/register"
 	rAuthLogin       = "/api/auth/login"
+	rAuthChangePwd   = "/api/auth/change_password"
 	rAuthToken       = "/api/auth/token"
 	rActionsRegister = "/api/actions/register"
 	rActionsImport   = "/api/actions/import/openapi"

@@ -65,7 +65,7 @@ python3 -m http.server 5500 -d frontend
 浏览器访问：`http://localhost:5500`。
 
 页面支持：
-- 用户注册 / 登录（`/api/auth/register`、`/api/auth/login`）
+- 用户注册 / 登录 / 修改密码（`/api/auth/register`、`/api/auth/login`、`/api/auth/change_password`）
 - 获取管理员 ID、健康检查
 - Action 注册 + 验证 + 激活
 - Skill 查询 + 执行
@@ -78,6 +78,7 @@ python3 -m http.server 5500 -d frontend
 - `POST /api/bootstrap/init_db`（初始化/重置本地数据库快照，需 `action:write`）
 - `POST /api/auth/register`（用户名密码注册）
 - `POST /api/auth/login`（用户名密码登录）
+- `POST /api/auth/change_password`（登录态修改密码）
 - `POST /api/auth/token`（用 user_id 换取 Bearer Token）
 - `POST /api/actions/register`
 - `POST /api/actions/import/openapi`（导入 OpenAPI 文档并批量生成 Draft Actions）
