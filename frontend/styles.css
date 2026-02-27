@@ -1,0 +1,95 @@
+:root {
+  --bg: #eef2ff;
+  --card: #fff;
+  --text: #1f2a3d;
+  --muted: #5f6c80;
+  --primary: #3557ff;
+  --border: #d8e0ef;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.topbar {
+  background: linear-gradient(120deg, #1f2f85, #3557ff);
+  color: #fff;
+  padding: 18px 22px;
+}
+.topbar h1 { margin: 0; font-size: 34px; }
+.topbar p { margin: 6px 0 0; opacity: .92; font-size: 16px; }
+.layout {
+  max-width: 1280px;
+  margin: 18px auto;
+  padding: 0 16px 30px;
+  display: grid;
+  gap: 14px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 6px rgba(26, 42, 84, 0.06);
+}
+.auth-card { border-left: 4px solid var(--primary); }
+.card h2 { margin: 0 0 10px; font-size: 32px; }
+.grid { display: grid; gap: 8px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid .full { grid-column: 1 / -1; }
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 18px;
+}
+input, select, textarea {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--text);
+  background: #fff;
+  font-size: 18px;
+}
+textarea {
+  min-height: 100px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 16px;
+}
+.actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button {
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 16px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button.ghost { background: #6b7280; }
+button:hover { filter: brightness(1.05); }
+.table-wrap { margin-top: 10px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 16px; }
+th, td { border: 1px solid var(--border); padding: 8px; }
+tr:hover { background: #f5f8ff; }
+pre {
+  background: #06163f;
+  color: #dbeafe;
+  margin: 0;
+  border-radius: 8px;
+  padding: 12px;
+  min-height: 180px;
+  overflow: auto;
+  font-size: 14px;
+}
+@media (max-width: 900px) {
+  .grid.two { grid-template-columns: 1fr; }
+}

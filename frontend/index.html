@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CapHub Vue 控制台</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <h1>CapHub 控制台（Vue）</h1>
+        <p>API 注册中心 · Skill 编排与执行 · 审计追踪</p>
+      </header>
+
+      <main class="layout">
+        <section class="card auth-card">
+          <h2>用户登录 / 注册</h2>
+          <div class="grid two">
+            <label>API Base URL
+              <input v-model="baseUrl" placeholder="http://localhost:8080" />
+            </label>
+            <label>当前登录状态
+              <input :value="token ? ('已登录：'+(username||userId)) : '未登录'" disabled />
+            </label>
+            <label>用户名
+              <input v-model="username" placeholder="例如：alice" />
+            </label>
+            <label>密码
+              <input v-model="password" type="password" placeholder="请输入密码" />
+            </label>
+            <label>新密码（修改密码时使用）
+              <input v-model="newPassword" type="password" placeholder="请输入新密码" />
+            </label>
+            <label>X-User-Id（兼容模式）
+              <input v-model="userId" placeholder="可通过管理员ID或登录回填" />
+            </label>
+            <label>Bearer Token
+              <input v-model="token" placeholder="登录后自动填充" />
+            </label>
+          </div>
+          <div class="actions">
+            <button @click="register">注册</button>
+            <button @click="login">登录</button>
+            <button @click="changePassword">修改密码</button>
+            <button @click="logout" class="ghost">退出登录</button>
+            <button @click="bootstrapAdmin" class="ghost">获取管理员ID</button>
+            <button @click="health" class="ghost">健康检查</button>
+          </div>
+        </section>
+
+        <section class="card" v-if="token || userId">
+          <h2>Action 注册</h2>
+          <div class="grid two">
+            <label>Name<input v-model="actionForm.name" /></label>
+            <label>Method<input v-model="actionForm.method" /></label>
+            <label class="full">URL<input v-model="actionForm.url" /></label>
+            <label>Risk Level
+              <select v-model="actionForm.risk_level"><option>low</option><option>medium</option><option>high</option></select>
+            </label>
+            <label>Tags (逗号分隔)<input v-model="actionForm.tags" /></label>
+            <label class="full">Description<input v-model="actionForm.description" /></label>
+            <label class="full">Input Schema (JSON)<textarea v-model="actionForm.input_schema"></textarea></label>
+            <label class="full">Output Schema (JSON)<textarea v-model="actionForm.output_schema"></textarea></label>
+          </div>
+          <div class="actions"><button @click="registerAction">注册 Action</button></div>
+        </section>
+
+        <section class="card" v-if="token || userId">
+          <h2>Action 生命周期</h2>
+          <div class="grid two">
+            <label>Action ID<input v-model="actionId" /></label>
+          </div>
+          <div class="actions">
+            <button @click="verifyAction">验证 Action</button>
+            <button @click="activateAction">激活 Action</button>
+          </div>
+        </section>
+
+        <section class="card" v-if="token || userId">
+          <h2>Skill 查询与执行</h2>
+          <div class="grid two">
+            <label>技能名过滤<input v-model="skillName" /></label>
+            <label>Tag 过滤<input v-model="skillTag" /></label>
+            <label>Skill ID<input v-model="skillId" /></label>
+            <label>高风险确认
+              <select v-model="confirmRisk"><option :value="false">false</option><option :value="true">true</option></select>
+            </label>
+            <label class="full">执行输入 (JSON)<textarea v-model="execInput"></textarea></label>
+          </div>
+          <div class="actions">
+            <button @click="querySkills">查询 Skill</button>
+            <button @click="executeSkill">执行 Skill</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Risk</th></tr></thead>
+              <tbody>
+                <tr v-for="s in skills" :key="s.id" @click="skillId=s.id">
+                  <td>{{ s.id }}</td><td>{{ s.name }}</td><td>{{ s.skill_type }}</td><td>{{ s.risk_level }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" v-if="token || userId">
+          <h2>审计日志</h2>
+          <div class="actions"><button @click="queryAudit">查询审计日志</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Action</th><th>Resource</th><th>Trace</th></tr></thead>
+              <tbody>
+                <tr v-for="a in audits" :key="a.id">
+                  <td>{{ a.created_at }}</td><td>{{ a.action }}</td><td>{{ a.resource_id }}</td><td>{{ a.trace_id }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>响应输出</h2>
+          <pre>{{ output }}</pre>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
